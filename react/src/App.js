@@ -6,7 +6,7 @@ import './App.css';
 // Import your page components
 import TaskList from './pages/TaskList';
 import AddTask from './pages/AddTask';
-// import TaskEdit from './pages/TaskEdit'; // You will add this for Task 5
+import TaskEdit from './pages/UpdateTask'; // <-- 1. Import TaskEdit
 
 function App() {
   return (
@@ -14,14 +14,14 @@ function App() {
       <h1>Task Management System</h1>
       
       <Routes>
-        {/* Default route redirects to the task list */}
+     
         <Route path="/" element={<Navigate to="/task-list" replace />} />
         
         <Route path="/task-list" element={<TaskList />} />
         <Route path="/add-task" element={<AddTask />} />
         
-        {/* Later, you will add routes for editing and viewing */}
-        {/* <Route path="/edit-task/:taskId" element={<TaskEdit />} /> */}
+       
+        <Route path="/edit-task/:taskId" element={<TaskEdit />} />
       </Routes>
     </div>
   );

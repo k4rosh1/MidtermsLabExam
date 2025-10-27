@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { handleDelete } from './DeleteTask.js'; // Assuming this is in './DeleteTask.js'
 
-const API_URL = 'http://localhost:8083/api/tasks';
+const API_URL = 'http://localhost:8083/api/tasks'; 
 
 const TaskList = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false); // <-- 1. ADD NEW STATE
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,40 +30,53 @@ const TaskList = () => {
     setLoading(false);
   };
 
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
-    try {
-      const response = await fetch(`${API_URL}/${taskId}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete task');
-      setTasks(tasks.filter(t => t.id !== taskId));
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
+  // --- 2. UPDATE THIS FUNCTION ---
   const handleStatusChange = async (taskId, currentStatus) => {
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    const confirmationMessage = `Are you sure you want to mark this task as ${newStatus}?`;
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    setIsUpdatingStatus(true); // <-- Show "Updating..." message
+    setError(null);
+
     try {
       const response = await fetch(`${API_URL}/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
+
       if (!response.ok) throw new Error('Failed to update status');
       
       const updatedTask = await response.json();
       setTasks(tasks.map(t => (t.id === updatedTask.id ? updatedTask : t)));
+
+      alert(`Task successfully marked as ${newStatus}!`);
+
     } catch (err) {
-      alert(err.message);
+      setError(err.message); // Show error
+    } finally {
+      setIsUpdatingStatus(false); // <-- Hide "Updating..." message
     }
   };
+  // --- END OF UPDATED FUNCTION ---
 
   const handleStartEdit = (task) => {
     navigate(`/edit-task/${task.id}`);
   };
 
+  const onDeleteClick = (taskId) => {
+    // Pass all state setters to the imported function
+    handleDelete(taskId, setTasks, setIsDeleting, setError);
+  };
+
   if (loading) return <p>Loading tasks...</p>;
-  if (error) return <p style={{color: 'red'}}>Error: {error}</p>;
+
+  // Check for global loading states
+  const isActionInProgress = isDeleting || isUpdatingStatus;
 
   return (
     <div className="task-list-container">
@@ -71,56 +87,57 @@ const TaskList = () => {
         </button>
       </Link>
 
+      {/* 3. ADD "UPDATING" MESSAGE HERE */}
+      {isDeleting && <p style={{color: 'blue', fontWeight: 'bold'}}>Deleting...</p>}
+      {isUpdatingStatus && <p style={{color: 'blue', fontWeight: 'bold'}}>Updating status...</p>}
+      {error && <p style={{color: 'red', fontWeight: 'bold'}}>Error: {error}</p>}
+
       {tasks.length === 0 ? (
         <p className="no-tasks">No tasks found. Get organized!</p>
       ) : (
-        // --- START OF TABLE ---
         <table className="task-table" width="100%">
           <thead>
             <tr>
               <th>Task Details</th>
               <th>Status</th>
               <th>Due Date</th>
-              <th></th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {tasks.map(task => (
-              // Use CSS to style the row based on status
               <tr key={task.id} className={`status-row-${task.status}`}>
-                {/* 1. Title and Description Cell */}
                 <td style={{width: '40%'}}>
                   <strong style={{fontSize: '1.1rem'}}>{task.title}</strong>
                   <p style={{fontSize: '0.9rem', color: '#555'}}>{task.description}</p>
                 </td>
-                
-                {/* 2. Status Cell */}
                 <td>
                   <span className={`status-badge status-${task.status}`}>
                     {task.status.toUpperCase()}
                   </span>
                 </td>
-                
-                {/* 3. Due Date Cell */}
                 <td>{task.due_date || 'N/A'}</td>
                 
-                {/* 4. Actions Cell */}
+                {/* 4. ADD 'disabled' TO ALL BUTTONS */}
                 <td className="task-actions">
                   <button 
                     className={`btn btn-status status-toggle-${task.status === 'completed' ? 'unmark' : 'mark'}`}
                     onClick={() => handleStatusChange(task.id, task.status)}
+                    disabled={isActionInProgress}
                   >
                     {task.status === 'completed' ? 'Mark Pending' : 'Mark Complete'}
                   </button>
                   <button 
                     className="btn btn-edit"
                     onClick={() => handleStartEdit(task)}
+                    disabled={isActionInProgress}
                   >
                     Edit
                   </button>
                   <button 
                     className="btn btn-delete"
-                    onClick={() => handleDelete(task.id)}
+                    onClick={() => onDeleteClick(task.id)}
+                    disabled={isActionInProgress}
                   >
                     Delete
                   </button>
@@ -129,7 +146,6 @@ const TaskList = () => {
             ))}
           </tbody>
         </table>
-        // --- END OF TABLE ---
       )}
     </div>
   );
