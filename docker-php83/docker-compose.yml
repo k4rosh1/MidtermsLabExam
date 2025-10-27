@@ -14,7 +14,7 @@ services:
     container_name: db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: rootpassword 
       MYSQL_DATABASE: testdb
       MYSQL_USER: user
       MYSQL_PASSWORD: pass
